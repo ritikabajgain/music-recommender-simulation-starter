@@ -17,17 +17,50 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+The system matches songs to a user by comparing four features: **mood**, **genre**, **energy**, and **acousticness**.
 
-Some prompts to answer:
+**Song features used:**
+- `genre` — the musical category of the song (e.g. pop, hip-hop, classical)
+- `mood` — the emotional character of the song (e.g. happy, sad, calm, hype)
+- `energy` — a 0.0–1.0 value representing intensity and activity level
+- `acousticness` — a 0.0–1.0 value representing how acoustic (vs. electronic) the song sounds
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+**UserProfile features used:**
+- `favorite_genre` — the genre the user prefers
+- `favorite_mood` — the mood the user wants to feel
+- `target_energy` — the energy level the user is looking for (0.0–1.0)
+- `likes_acoustic` — whether the user prefers acoustic-sounding songs
 
-You can include a simple diagram or bullet list if helpful.
+---
+
+### Algorithm Recipe
+
+Each song starts at a score of 0.0. The recommender applies four rules in sequence and sums the result:
+
+| Rule | Condition | Points |
+|------|-----------|--------|
+| Genre match | `song.genre == user.favorite_genre` | +2.0 |
+| Mood match | `song.mood == user.favorite_mood` | +2.0 |
+| Energy proximity | `1.0 - abs(song.energy - user.target_energy)` | +0.0 to +1.0 |
+| Acousticness fit | song acousticness aligns with `likes_acoustic` preference | +1.0 or +0.0 |
+
+**Acousticness rule detail:**
+- If `likes_acoustic = True` and `song.acousticness >= 0.6` → +1.0
+- If `likes_acoustic = False` and `song.acousticness <= 0.3` → +1.0
+- Otherwise → +0.0
+
+**Max possible score: 6.0**
+
+After scoring all songs, they are sorted by score descending and the top `k` (default 5) are returned as recommendations.
+
+---
+
+### Potential Biases
+
+- **Genre dominates the ranking.** Genre and mood together account for 4 out of 6 possible points. A song that perfectly matches the user's energy and acousticness preference but is a different genre will almost always rank below a genre-matched song — even if it would sound better to the user.
+- **Mood is treated as a hard category.** A song labeled "melancholy" gets zero mood points for a user who prefers "sad," even though those moods are very similar. The system does not understand closeness between moods.
+- **Acousticness is binary.** The threshold (0.3 / 0.6) means a song at 0.31 and a song at 0.90 are treated identically for a user who likes acoustic music, losing nuance.
+- **Small catalog amplifies bias.** With only 20 songs, a genre that appears once or twice will rarely surface, regardless of how well it fits the user's other preferences.
 
 ---
 

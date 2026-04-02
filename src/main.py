@@ -9,14 +9,20 @@ You will implement the functions in recommender.py:
 - recommend_songs
 """
 
-from recommender import load_songs, recommend_songs
+from src.recommender import load_songs, recommend_songs
 
 
 def main() -> None:
-    songs = load_songs("data/songs.csv") 
+    songs = load_songs("data/songs.csv")
+    print(f"Loaded songs: {len(songs)}")
 
-    # Starter example profile
-    user_prefs = {"genre": "pop", "mood": "happy", "energy": 0.8}
+    # Taste profile: target values for the four scored features
+    user_prefs = {
+        "genre": "hip-hop",       # preferred genre
+        "mood": "confident",      # preferred mood
+        "energy": 0.80,           # target energy level (0.0–1.0)
+        "likes_acoustic": False,  # prefers electronic/produced sound over acoustic
+    }
 
     recommendations = recommend_songs(user_prefs, songs, k=5)
 

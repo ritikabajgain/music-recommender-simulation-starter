@@ -1,3 +1,4 @@
+import csv
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 
@@ -50,15 +51,62 @@ def load_songs(csv_path: str) -> List[Dict]:
     Loads songs from a CSV file.
     Required by src/main.py
     """
-    # TODO: Implement CSV loading logic
-    print(f"Loading songs from {csv_path}...")
-    return []
+    songs = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row["energy"] = float(row["energy"])
+            row["tempo_bpm"] = float(row["tempo_bpm"])
+            row["valence"] = float(row["valence"])
+            row["danceability"] = float(row["danceability"])
+            row["acousticness"] = float(row["acousticness"])
+            songs.append(row)
+    return songs
+
+def score_song(song: Dict, user_prefs: Dict) -> Tuple[float, List[str]]:
+    """
+    Scores a single song against user preferences.
+    Returns (total_score, list_of_reasons).
+    """
+    score = 0.0
+    reasons = []
+
+    # Rule 1: Genre match (+2.0)
+    if song["genre"] == user_prefs["genre"]:
+        score += 2.0
+        reasons.append(f"genre match (+2.0)")
+
+    # Rule 2: Mood match (+2.0)
+    if song["mood"] == user_prefs["mood"]:
+        score += 2.0
+        reasons.append(f"mood match (+2.0)")
+
+    # Rule 3: Energy proximity (+0.0 to +1.0)
+    energy_score = round(1.0 - abs(song["energy"] - user_prefs["energy"]), 2)
+    score += energy_score
+    reasons.append(f"energy proximity (+{energy_score})")
+
+    # Rule 4: Acousticness fit (+1.0 or +0.0)
+    if user_prefs["likes_acoustic"] and song["acousticness"] >= 0.6:
+        score += 1.0
+        reasons.append("acousticness fit (+1.0)")
+    elif not user_prefs["likes_acoustic"] and song["acousticness"] <= 0.3:
+        score += 1.0
+        reasons.append("acousticness fit (+1.0)")
+
+    return round(score, 2), reasons
+
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
     """
     Functional implementation of the recommendation logic.
     Required by src/main.py
     """
-    # TODO: Implement scoring and ranking logic
-    # Expected return format: (song_dict, score, explanation)
-    return []
+    scored = []
+    for song in songs:
+        total_score, reasons = score_song(song, user_prefs)
+        explanation = ", ".join(reasons) if reasons else "no strong matches"
+        scored.append((song, total_score, explanation))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[:k]
